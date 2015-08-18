@@ -49,6 +49,7 @@ require_once 'vendor/nosto/php-sdk/autoload.php';
 class Shopware_Plugins_Frontend_NostoTagging_Bootstrap extends Shopware_Components_Plugin_Bootstrap
 {
 	const PLATFORM_NAME = 'shopware';
+	const CONFIG_THUMB_SIZE = 'nostoThumbSize';
 
 	/**
 	 * @inheritdoc
@@ -109,6 +110,7 @@ class Shopware_Plugins_Frontend_NostoTagging_Bootstrap extends Shopware_Componen
 	 */
 	public function install()
 	{
+		$this->createConfiguration();
 		$this->createMyTables();
 		$this->createMyAttributes();
 		$this->createMyMenu();
@@ -131,6 +133,7 @@ class Shopware_Plugins_Frontend_NostoTagging_Bootstrap extends Shopware_Componen
 	 */
 	public function update($version)
 	{
+		// todo: create the config form when updating from 1.0.0.
 		return true;
 	}
 
@@ -474,6 +477,41 @@ class Shopware_Plugins_Frontend_NostoTagging_Bootstrap extends Shopware_Componen
 		}
 
 		return $setting->getValue();
+	}
+
+	/**
+	 * Creates the config section for the plugin.
+	 *
+	 * This section contains advanced configurations.
+	 *
+	 * @see Shopware_Plugins_Frontend_NostoTagging_Bootstrap::install
+	 */
+	public function createConfiguration()
+	{
+		$form = $this->Form();
+
+		// Setting for thumbnail image size for products.
+		$album = Shopware()
+			->Models()
+			->getRepository('Shopware\Models\Media\Media')
+			->getAlbumWithSettingsQuery(-1)
+			->getOneOrNullResult();
+		if (!is_null($album) && $album->getSettings()) {
+			$thumbStore = array();
+			foreach ($album->getSettings()->getThumbnailSize() as $size) {
+				$thumbStore[] = array($size, $size);
+			}
+			// todo: switch to a remote combo-box, so new sizes are available automatically
+			$form->setElement(
+				'select',
+				self::CONFIG_THUMB_SIZE,
+				array(
+					'label' => 'Thumbnail Image Size',
+					'description' => 'The size of the images used in product recommendations. The sizes are based on the "Artikel" media album thumbnails.',
+					'store' => $thumbStore,
+				)
+			);
+		}
 	}
 
 	/**

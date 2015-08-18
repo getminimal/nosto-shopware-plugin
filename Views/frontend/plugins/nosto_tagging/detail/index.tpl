@@ -43,6 +43,9 @@
 			<span class="product_id">{$nostoProduct->getProductId()|escape:'htmlall':'UTF-8'}</span>
 			<span class="name">{$nostoProduct->getName()|escape:'htmlall':'UTF-8'}</span>
 			<span class="image_url">{$nostoProduct->getImageUrl()|escape:'htmlall':'UTF-8'}</span>
+			{if $nostoProduct->getThumbUrl()}
+				<span class="thumb_url">{$nostoProduct->getThumbUrl()|escape:'htmlall':'UTF-8'}</span>
+			{/if}
 			{if $nostoProduct->getPrice()}
 				<span class="price">{$nostoProduct->getPrice()->getPrice()|number_format:2}</span>
 			{/if}

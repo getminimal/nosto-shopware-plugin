@@ -71,6 +71,11 @@ class Shopware_Plugins_Frontend_NostoTagging_Components_Model_Product extends Sh
 	protected $imageUrl;
 
 	/**
+	 * @var string the absolute url to the product thumbnail image.
+	 */
+	protected $thumbUrl;
+
+	/**
 	 * @var NostoPrice product price, discounted including vat.
 	 */
 	protected $price;
@@ -139,7 +144,9 @@ class Shopware_Plugins_Frontend_NostoTagging_Components_Model_Product extends Sh
 		$this->assignId($article);
 		$this->url = $this->assembleProductUrl($article, $shop);
 		$this->name = $article->getName();
-		$this->imageUrl = $this->assembleImageUrl($article);
+        $urls = $this->assembleImageUrls($article);
+		$this->imageUrl = isset($urls[0]) ? $urls[0] : null;
+        $this->thumbUrl = isset($urls[1]) ? $urls[1] : null;
 		$this->price = new NostoPrice($this->calcPriceInclTax($article, 'price'));
 		$this->listPrice = new NostoPrice($this->calcPriceInclTax($article, 'listPrice'));
 		$this->currency = new NostoCurrencyCode($shop->getCurrency()->getCurrency());
@@ -173,43 +180,68 @@ class Shopware_Plugins_Frontend_NostoTagging_Components_Model_Product extends Sh
 	}
 
 	/**
-	 * Assembles the product image url based on article.
+	 * Assembles the product image urls based on article.
+     *
+     * Both the original image url and a thumbnail version is returned. The
+	 * thumbnail size is determined by a config setting.
 	 *
-	 * Validates that the image can be found in the file system before returning
-	 * the url. This will not guarantee that the url works, but we should be
-	 * able to assume that if the image is in the correct place, the url works.
-	 *
-	 * The url will always be for the original image, not the thumbnails.
+	 * Validates that the image can be found in the file. This will not
+	 * guarantee that the url works, but we should be able to assume that if the
+	 * image is in the correct place, the url works.
 	 *
 	 * @param \Shopware\Models\Article\Article $article the article model.
-	 * @return string|null the url or null if image not found.
+	 * @return array the original image url and the thumbnail url if exists.
 	 */
-	protected function assembleImageUrl(\Shopware\Models\Article\Article $article)
+	protected function assembleImageUrls(\Shopware\Models\Article\Article $article)
 	{
-		$url = null;
+		$urls = array();
+
+		$basePath = trim(Shopware()->Config()->get('basePath'));
+		$baseUrl = 'http://'.$basePath.'/';
+
+		/** @var Shopware_Plugins_Frontend_NostoTagging_Bootstrap $plugin */
+		$plugin = Shopware()->Plugins()->Frontend()->NostoTagging();
+		$thumbSize = $plugin->Config()->get(Shopware_Plugins_Frontend_NostoTagging_Bootstrap::CONFIG_THUMB_SIZE);
 
 		/** @var Shopware\Models\Article\Image $image */
 		foreach ($article->getImages() as $image) {
-			$media = $image->getMedia();
-			$type = strtolower($media->getType());
-			$dirPath = rtrim(Shopware()->DocPath('media_'.$type), DIRECTORY_SEPARATOR);
-			$fileName = ltrim($media->getFileName(), DIRECTORY_SEPARATOR);
-			$file = $dirPath.DIRECTORY_SEPARATOR.$fileName;
-			if (!file_exists($file)) {
-				continue;
-			}
-			if (is_null($url) || $image->getMain() === 1) {
-				$baseUrl = trim(Shopware()->Config()->get('basePath'));
-				$filePath = ltrim($media->getPath(), '/');
-				$url = 'http://'.$baseUrl.'/'.$filePath;
+            if (!$this->imageExists($image)) {
+                continue;
+            }
+			// Prefer the main image, but settle for any other if not found.
+			if (empty($urls) || $image->getMain() === 1) {
+                $media = $image->getMedia();
+				$thumbnails = $media->getThumbnails();
+				$urls[0] = $baseUrl.ltrim($media->getPath(), '/');
+				$urls[1] = ($thumbSize && isset($thumbnails[$thumbSize]))
+					? $baseUrl.ltrim($thumbnails[$thumbSize], '/')
+					: null;
+
 				if ($image->getMain() === 1) {
 					break;
 				}
 			}
+
 		}
 
-		return $url;
+		return $urls;
 	}
+
+    /**
+     * Checks if the image file exists in the filesystem.
+     *
+     * @param \Shopware\Models\Article\Image $image the image to check.
+     * @return bool true if image exists, false otherwise.
+     */
+    protected function imageExists(Shopware\Models\Article\Image $image)
+    {
+        $media = $image->getMedia();
+        $type = strtolower($media->getType());
+        $dirPath = rtrim(Shopware()->DocPath('media_'.$type), DIRECTORY_SEPARATOR);
+        $fileName = ltrim($media->getFileName(), DIRECTORY_SEPARATOR);
+        $file = $dirPath.DIRECTORY_SEPARATOR.$fileName;
+        return file_exists($file);
+    }
 
 	/**
 	 * Calculates the price including tax and returns it.
@@ -348,6 +380,14 @@ class Shopware_Plugins_Frontend_NostoTagging_Components_Model_Product extends Sh
 	public function getImageUrl()
 	{
 		return $this->imageUrl;
+	}
+
+	/**
+	 * @inheritdoc
+	 */
+	public function getThumbUrl()
+	{
+		return $this->thumbUrl;
 	}
 
 	/**
