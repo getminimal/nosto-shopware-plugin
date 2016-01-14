@@ -67,7 +67,7 @@ class Shopware_Plugins_Frontend_NostoTagging_Components_Service_Product extends 
 				$model->loadData($article, $shop);
 				$service = new NostoServiceProduct($account);
 				$service->addProduct($model);
-				$service->create();
+				$service->upsert();
 			} catch (NostoException $e) {
 				Shopware()->Pluginlogger()->error($e);
 			}
@@ -94,7 +94,7 @@ class Shopware_Plugins_Frontend_NostoTagging_Components_Service_Product extends 
 				$model->loadData($article, $shop);
 				$service = new NostoServiceProduct($account);
 				$service->addProduct($model);
-				$service->update();
+				$service->upsert();
 			} catch (NostoException $e) {
 				Shopware()->Pluginlogger()->error($e);
 			}
