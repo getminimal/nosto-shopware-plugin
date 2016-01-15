@@ -126,7 +126,7 @@ class Shopware_Plugins_Frontend_NostoTagging_Components_Meta_Account extends Sho
 
 		$this->title = Shopware()->App().' - '.$shop->getName();
 		$this->name = substr(sha1(rand()), 0, 8);
-		$this->frontPageUrl = Shopware()->Front()->Router()->assemble(array('module' => 'frontend'));
+		$this->frontPageUrl = $this->buildStoreUrl($shop);
 		$this->currency = new NostoCurrencyCode($defaultCurrency->getCurrency());
 		$this->language = new NostoLanguageCode(substr($shop->getLocale()->getLocale(), 0, 2));
 		$this->ownerLanguage = new NostoLanguageCode(substr($locale->getLocale(), 0, 2));
@@ -146,6 +146,23 @@ class Shopware_Plugins_Frontend_NostoTagging_Components_Meta_Account extends Sho
                 $this->useCurrencyExchangeRates = $this->plugin()->isMultiCurrencyMethodExchangeRate();
             }
         }
+	}
+
+	/**
+	 * Adds required store selection params to the url.
+	 *
+	 * These params is `__shop`
+	 *
+	 * @param \Shopware\Models\Shop\Shop $shop the shop model.
+	 * @return string the url with added params.
+	 */
+	protected function buildStoreUrl(\Shopware\Models\Shop\Shop $shop)
+	{
+		$url = Shopware()->Front()->Router()->assemble(array('module' => 'frontend'));
+		$defaults = array(
+			'__shop' => $shop->getId()
+		);
+		return NostoHttpRequest::replaceQueryParamsInUrl($defaults, $url);
 	}
 
 	/**
